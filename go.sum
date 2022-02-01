@@ -613,6 +613,8 @@ github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyC
 github.com/valyala/fasttemplate v1.0.1/go.mod h1:UQGH1tvbgY+Nz5t2n7tXsz52dQxojPUpymEIMZ47gx8=
 github.com/xjzsq/goldmark-mathjax v0.0.0-20220201204953-46e476d5d8ed h1:8jokHnoELUuE2hHaBlcOS9bz4gfUscLxP0feQWbX4H4=
 github.com/xjzsq/goldmark-mathjax v0.0.0-20220201204953-46e476d5d8ed/go.mod h1:G6FZZOoT3xt2MPL/HXqPByKC88wuXfHP4k0TFK+Mnp8=
+github.com/xjzsq/goldmark-mathjax v0.0.0-20220201211907-6e87ac48b4dc h1:5FE9KhjKNUvY8hdg/HIo51Lh2XSQ/A+z77/BY/9cZfQ=
+github.com/xjzsq/goldmark-mathjax v0.0.0-20220201211907-6e87ac48b4dc/go.mod h1:G6FZZOoT3xt2MPL/HXqPByKC88wuXfHP4k0TFK+Mnp8=
 github.com/yuin/goldmark v1.1.22/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
