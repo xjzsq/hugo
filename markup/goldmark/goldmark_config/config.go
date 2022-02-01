@@ -30,6 +30,7 @@ var Default = Config{
 		Strikethrough:  true,
 		Linkify:        true,
 		TaskList:       true,
+		Mathjax:        true,
 	},
 	Renderer: Renderer{
 		Unsafe: false,
@@ -61,6 +62,7 @@ type Extensions struct {
 	Strikethrough bool
 	Linkify       bool
 	TaskList      bool
+	Mathjax       bool
 }
 
 type Renderer struct {
