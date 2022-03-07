@@ -242,8 +242,8 @@ github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMo
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fsnotify/fsnotify v1.5.1 h1:mZcQUHVQUQWoPXXtuf9yuEXKudkV2sx1E06UadKWpgI=
 github.com/fsnotify/fsnotify v1.5.1/go.mod h1:T3375wBYaZdLLcVNkcVbzGHY7f1l/uK5T5Ai1i3InKU=
-github.com/getkin/kin-openapi v0.85.0 h1:vjP2gh+CpIYbgMaFYp2XUBTVDtiYAZ5f+Hxy2Yes1+A=
-github.com/getkin/kin-openapi v0.85.0/go.mod h1:660oXbgy5JFMKreazJaQTw7o+X00qeSyhcnluiMv+Xg=
+github.com/getkin/kin-openapi v0.91.0 h1:mOSAljTAQONM0YVtI3+LvIQaa0zPwa3SH6UuiyEnbYQ=
+github.com/getkin/kin-openapi v0.91.0/go.mod h1:660oXbgy5JFMKreazJaQTw7o+X00qeSyhcnluiMv+Xg=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
@@ -611,10 +611,6 @@ github.com/tdewolff/test v1.0.6/go.mod h1:6DAvZliBAAnD7rhVgwaM7DE5/d9NMOAJ09SqYq
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqriFuLhtthL60Sar/7RFoluCcXsuvEwTV5KM=
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/valyala/fasttemplate v1.0.1/go.mod h1:UQGH1tvbgY+Nz5t2n7tXsz52dQxojPUpymEIMZ47gx8=
-github.com/xjzsq/goldmark-mathjax v0.0.0-20220201204953-46e476d5d8ed h1:8jokHnoELUuE2hHaBlcOS9bz4gfUscLxP0feQWbX4H4=
-github.com/xjzsq/goldmark-mathjax v0.0.0-20220201204953-46e476d5d8ed/go.mod h1:G6FZZOoT3xt2MPL/HXqPByKC88wuXfHP4k0TFK+Mnp8=
-github.com/xjzsq/goldmark-mathjax v0.0.0-20220201211907-6e87ac48b4dc h1:5FE9KhjKNUvY8hdg/HIo51Lh2XSQ/A+z77/BY/9cZfQ=
-github.com/xjzsq/goldmark-mathjax v0.0.0-20220201211907-6e87ac48b4dc/go.mod h1:G6FZZOoT3xt2MPL/HXqPByKC88wuXfHP4k0TFK+Mnp8=
 github.com/xjzsq/goldmark-mathjax v0.0.0-20220203214157-39723e267f65 h1:zwzT39Cedm3x7Lx7ORMrRytx0rkvsj5jQ209U41Gvjc=
 github.com/xjzsq/goldmark-mathjax v0.0.0-20220203214157-39723e267f65/go.mod h1:G6FZZOoT3xt2MPL/HXqPByKC88wuXfHP4k0TFK+Mnp8=
 github.com/yuin/goldmark v1.1.22/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
