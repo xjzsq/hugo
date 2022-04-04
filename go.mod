@@ -6,7 +6,7 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/alecthomas/chroma v0.9.4
 	github.com/armon/go-radix v1.0.0
-	github.com/aws/aws-sdk-go v1.41.14
+	github.com/aws/aws-sdk-go v1.43.31
 	github.com/bep/debounce v1.2.0
 	github.com/bep/gitmap v1.1.2
 	github.com/bep/godartsass v0.12.0
@@ -29,7 +29,7 @@ require (
 	github.com/gohugoio/locales v0.14.0
 	github.com/gohugoio/localescompressed v0.14.0
 	github.com/gohugoio/testmodBuilder/mods v0.0.0-20190520184928-c56af20f2e95
-	github.com/google/go-cmp v0.5.6
+	github.com/google/go-cmp v0.5.7
 	github.com/gorilla/websocket v1.4.2
 	github.com/jdkato/prose v1.2.1
 	github.com/kylelemons/godebug v1.1.0
@@ -56,15 +56,15 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
 	github.com/tdewolff/minify/v2 v2.9.22
-	github.com/xjzsq/goldmark-mathjax v0.0.0-20220203214157-39723e267f65 // indirect
+	github.com/xjzsq/goldmark-mathjax v0.0.0-20220203214157-39723e267f65
 	github.com/yuin/goldmark v1.4.4
 	github.com/yuin/goldmark-highlighting v0.0.0-20200307114337-60d527fdb691
-	gocloud.dev v0.20.0
+	gocloud.dev v0.25.0
 	golang.org/x/image v0.0.0-20211028202545-6944b10bf410
-	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d
+	golang.org/x/net v0.0.0-20220401154927-543a649e0bdd
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/text v0.3.7
-	google.golang.org/api v0.63.0
+	google.golang.org/api v0.74.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
