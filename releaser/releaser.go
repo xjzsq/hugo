@@ -26,8 +26,9 @@ import (
 
 	"github.com/gohugoio/hugo/common/hexec"
 
+	"errors"
+
 	"github.com/gohugoio/hugo/common/hugo"
-	"github.com/pkg/errors"
 )
 
 const commitPrefix = "releaser:"
@@ -207,7 +208,7 @@ func (r *ReleaseHandler) release(releaseNotesFile string) error {
 		return nil
 	}
 
-	args := []string{"--parallelism", "3", "--timeout", "120m", "--rm-dist", "--release-notes", releaseNotesFile}
+	args := []string{"--parallelism", "2", "--timeout", "120m", "--rm-dist", "--release-notes", releaseNotesFile}
 	if r.skipPublish {
 		args = append(args, "--skip-publish")
 	}
@@ -217,7 +218,7 @@ func (r *ReleaseHandler) release(releaseNotesFile string) error {
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
-		return errors.Wrap(err, "goreleaser failed")
+		return fmt.Errorf("goreleaser failed: %w", err)
 	}
 	return nil
 }
@@ -230,9 +231,9 @@ func (r *ReleaseHandler) bumpVersions(ver hugo.Version) error {
 	}
 
 	if err := r.replaceInFile("common/hugo/version_current.go",
-		`Number:(\s{4,})(.*),`, fmt.Sprintf(`Number:${1}%.2f,`, ver.Number),
-		`PatchLevel:(\s*)(.*),`, fmt.Sprintf(`PatchLevel:${1}%d,`, ver.PatchLevel),
-		`Suffix:(\s{4,})".*",`, fmt.Sprintf(`Suffix:${1}"%s",`, toDev)); err != nil {
+		`Minor:(\s*)(\d*),`, fmt.Sprintf(`Minor:${1}%d,`, ver.Minor),
+		`PatchLevel:(\s*)(\d*),`, fmt.Sprintf(`PatchLevel:${1}%d,`, ver.PatchLevel),
+		`Suffix:(\s*)".*",`, fmt.Sprintf(`Suffix:${1}"%s",`, toDev)); err != nil {
 		return err
 	}
 

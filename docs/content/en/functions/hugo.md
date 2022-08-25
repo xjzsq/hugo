@@ -4,7 +4,6 @@ linktitle: hugo
 description: The `hugo` function provides easy access to Hugo-related data.
 date: 2019-01-31
 publishdate: 2019-01-31
-lastmod: 2019-01-31
 keywords: []
 categories: [functions]
 menu:
@@ -28,8 +27,8 @@ hugo.Generator
 hugo.Version
 : the current version of the Hugo binary you are using e.g. `0.63.2`
 
-
-`hugo` returns an instance that contains the following functions:
+hugo.GoVersion
+: returns the version of Go that the Hugo binary was built with. {{< new-in "0.101.0" >}}
 
 hugo.Environment
 : the current running environment as defined through the `--environment` cli tag
@@ -53,24 +52,23 @@ We highly recommend using `hugo.Generator` in your website's `<head>`. `hugo.Gen
 hugo.Deps
 : See [hugo.Deps](#hugodeps)
 
-
 ## hugo.Deps
 
 {{< new-in "0.92.0" >}}
 
 `hugo.Deps` returns a list of dependencies for a project (either Hugo Modules or local theme components).
 
-Eeach dependency contains:
+Each dependency contains:
 
 Path (string)
 : Returns the path to this module. This will either be the module path, e.g. "github.com/gohugoio/myshortcodes", or the path below your /theme folder, e.g. "mytheme".
 
 Version (string)
 :  The module version.
-	
+
 Vendor (bool)
 : Whether this dependency is vendored.
- 
+
 Time (time.Time)
 : Time version was created.
 

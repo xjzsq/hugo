@@ -163,6 +163,7 @@ func (m Type) Type() string {
 	return m.MainType + "/" + m.SubType
 }
 
+// For internal use.
 func (m Type) String() string {
 	return m.Type()
 }
@@ -229,7 +230,7 @@ var (
 	SASSType       = newMediaType("text", "x-sass", []string{"sass"})
 	CSVType        = newMediaType("text", "csv", []string{"csv"})
 	HTMLType       = newMediaType("text", "html", []string{"html"})
-	JavascriptType = newMediaType("application", "javascript", []string{"js"})
+	JavascriptType = newMediaType("application", "javascript", []string{"js", "jsm", "mjs"})
 	TypeScriptType = newMediaType("application", "typescript", []string{"ts"})
 	TSXType        = newMediaType("text", "tsx", []string{"tsx"})
 	JSXType        = newMediaType("text", "jsx", []string{"jsx"})
@@ -256,7 +257,8 @@ var (
 	OpenTypeFontType = newMediaType("font", "otf", []string{"otf"})
 
 	// Common document types
-	PDFType = newMediaType("application", "pdf", []string{"pdf"})
+	PDFType      = newMediaType("application", "pdf", []string{"pdf"})
+	MarkdownType = newMediaType("text", "markdown", []string{"md", "markdown"})
 
 	// Common video types
 	AVIType  = newMediaType("video", "x-msvideo", []string{"avi"})
@@ -277,6 +279,7 @@ var DefaultTypes = Types{
 	SCSSType,
 	SASSType,
 	HTMLType,
+	MarkdownType,
 	JavascriptType,
 	TypeScriptType,
 	TSXType,
@@ -450,7 +453,7 @@ Note that you can still get the Media Type's suffix from a template: {{ $mediaTy
 
 // DecodeTypes takes a list of media type configurations and merges those,
 // in the order given, with the Hugo defaults as the last resort.
-func DecodeTypes(mms ...map[string]interface{}) (Types, error) {
+func DecodeTypes(mms ...map[string]any) (Types, error) {
 	var m Types
 
 	// Maps type string to Type. Type string is the full application/svg+xml.
@@ -510,11 +513,13 @@ func DecodeTypes(mms ...map[string]interface{}) (Types, error) {
 }
 
 // IsZero reports whether this Type represents a zero value.
+// For internal use.
 func (m Type) IsZero() bool {
 	return m.SubType == ""
 }
 
 // MarshalJSON returns the JSON encoding of m.
+// For internal use.
 func (m Type) MarshalJSON() ([]byte, error) {
 	type Alias Type
 	return json.Marshal(&struct {

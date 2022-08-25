@@ -23,15 +23,20 @@ import (
 	"sync"
 	"unicode/utf8"
 
+	"errors"
+
+	"github.com/gohugoio/hugo/common/text"
+	"github.com/gohugoio/hugo/common/types/hstring"
 	"github.com/gohugoio/hugo/identity"
+	"github.com/gohugoio/hugo/parser/pageparser"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 
 	"github.com/gohugoio/hugo/markup/converter/hooks"
 
 	"github.com/gohugoio/hugo/markup/converter"
 
+	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/gohugoio/hugo/lazy"
 
 	bp "github.com/gohugoio/hugo/bufferpool"
@@ -109,19 +114,11 @@ func newPageContentOutput(p *pageState, po *pageOutput) (*pageContentOutput, err
 			return err
 		}
 
-		enableReuse := !(hasShortcodeVariants || cp.renderHooksHaveVariants)
-
-		if enableReuse {
-			// Reuse this for the other output formats.
-			// We may improve on this, but we really want to avoid re-rendering the content
-			// to all output formats.
-			// The current rule is that if you need output format-aware shortcodes or
-			// content rendering hooks, create a output format-specific template, e.g.
-			// myshortcode.amp.html.
-			cp.enableReuse()
+		if hasShortcodeVariants {
+			p.pageOutputTemplateVariationsState.Store(2)
 		}
 
-		cp.workContent = p.contentToRender(cp.contentPlaceholders)
+		cp.workContent = p.contentToRender(p.source.parsed, p.cmap, cp.contentPlaceholders)
 
 		isHTML := cp.p.m.markup == "html"
 
@@ -199,22 +196,13 @@ func newPageContentOutput(p *pageState, po *pageOutput) (*pageContentOutput, err
 		return nil
 	}
 
-	// Recursive loops can only happen in content files with template code (shortcodes etc.)
-	// Avoid creating new goroutines if we don't have to.
-	needTimeout := p.shortcodeState.hasShortcodes() || cp.renderHooks != nil
+	// There may be recursive loops in shortcodes and render hooks.
+	cp.initMain = parent.BranchWithTimeout(p.s.siteCfg.timeout, func(ctx context.Context) (any, error) {
+		return nil, initContent()
+	})
 
-	if needTimeout {
-		cp.initMain = parent.BranchWithTimeout(p.s.siteCfg.timeout, func(ctx context.Context) (interface{}, error) {
-			return nil, initContent()
-		})
-	} else {
-		cp.initMain = parent.Branch(func() (interface{}, error) {
-			return nil, initContent()
-		})
-	}
-
-	cp.initPlain = cp.initMain.Branch(func() (interface{}, error) {
-		cp.plain = helpers.StripHTML(string(cp.content))
+	cp.initPlain = cp.initMain.Branch(func() (any, error) {
+		cp.plain = tpl.StripHTML(string(cp.content))
 		cp.plainWords = strings.Fields(cp.plain)
 		cp.setWordCounts(p.m.isCJKLanguage)
 
@@ -229,17 +217,13 @@ func newPageContentOutput(p *pageState, po *pageOutput) (*pageContentOutput, err
 }
 
 type renderHooks struct {
-	hooks hooks.Renderers
-	init  sync.Once
+	getRenderer hooks.GetRendererFunc
+	init        sync.Once
 }
 
 // pageContentOutput represents the Page content for a given output format.
 type pageContentOutput struct {
 	f output.Format
-
-	// If we can reuse this for other output formats.
-	reuse     bool
-	reuseInit sync.Once
 
 	p *pageState
 
@@ -250,12 +234,8 @@ type pageContentOutput struct {
 	placeholdersEnabled     bool
 	placeholdersEnabledInit sync.Once
 
+	// Renders Markdown hooks.
 	renderHooks *renderHooks
-
-	// Set if there are more than one output format variant
-	renderHooksHaveVariants bool // TODO(bep) reimplement this in another way, consolidate with shortcodes
-
-	// Content state
 
 	workContent       []byte
 	dependencyTracker identity.Manager // Set in server mode.
@@ -294,7 +274,7 @@ func (p *pageContentOutput) Reset() {
 	p.renderHooks = &renderHooks{}
 }
 
-func (p *pageContentOutput) Content() (interface{}, error) {
+func (p *pageContentOutput) Content() (any, error) {
 	if p.p.s.initInit(p.initMain, p.p) {
 		return p.content, nil
 	}
@@ -352,30 +332,38 @@ func (p *pageContentOutput) WordCount() int {
 	return p.wordCount
 }
 
-func (p *pageContentOutput) RenderString(args ...interface{}) (template.HTML, error) {
+func (p *pageContentOutput) RenderString(args ...any) (template.HTML, error) {
 	if len(args) < 1 || len(args) > 2 {
 		return "", errors.New("want 1 or 2 arguments")
 	}
 
-	var s string
+	var contentToRender string
 	opts := defaultRenderStringOpts
 	sidx := 1
 
 	if len(args) == 1 {
 		sidx = 0
 	} else {
-		m, ok := args[0].(map[string]interface{})
+		m, ok := args[0].(map[string]any)
 		if !ok {
 			return "", errors.New("first argument must be a map")
 		}
 
 		if err := mapstructure.WeakDecode(m, &opts); err != nil {
-			return "", errors.WithMessage(err, "failed to decode options")
+			return "", fmt.Errorf("failed to decode options: %w", err)
 		}
 	}
 
+	contentToRenderv := args[sidx]
+
+	if _, ok := contentToRenderv.(hstring.RenderedString); ok {
+		// This content is already rendered, this is potentially
+		// a infinite recursion.
+		return "", errors.New("text is already rendered, repeating it may cause infinite recursion")
+	}
+
 	var err error
-	s, err = cast.ToStringE(args[sidx])
+	contentToRender, err = cast.ToStringE(contentToRenderv)
 	if err != nil {
 		return "", err
 	}
@@ -388,26 +376,85 @@ func (p *pageContentOutput) RenderString(args ...interface{}) (template.HTML, er
 	if opts.Markup != "" && opts.Markup != p.p.m.markup {
 		var err error
 		// TODO(bep) consider cache
-		conv, err = p.p.m.newContentConverter(p.p, opts.Markup, nil)
+		conv, err = p.p.m.newContentConverter(p.p, opts.Markup)
 		if err != nil {
 			return "", p.p.wrapError(err)
 		}
 	}
 
-	c, err := p.renderContentWithConverter(conv, []byte(s), false)
-	if err != nil {
-		return "", p.p.wrapError(err)
-	}
+	var rendered []byte
 
-	b := c.Bytes()
+	if strings.Contains(contentToRender, "{{") {
+		// Probably a shortcode.
+		parsed, err := pageparser.ParseMain(strings.NewReader(contentToRender), pageparser.Config{})
+		if err != nil {
+			return "", err
+		}
+		pm := &pageContentMap{
+			items: make([]any, 0, 20),
+		}
+		s := newShortcodeHandler(p.p, p.p.s)
+
+		if err := p.p.mapContentForResult(
+			parsed,
+			s,
+			pm,
+			opts.Markup,
+			nil,
+		); err != nil {
+			return "", err
+		}
+
+		placeholders, hasShortcodeVariants, err := s.renderShortcodesForPage(p.p, p.f)
+		if err != nil {
+			return "", err
+		}
+
+		if hasShortcodeVariants {
+			p.p.pageOutputTemplateVariationsState.Store(2)
+		}
+
+		b, err := p.renderContentWithConverter(conv, p.p.contentToRender(parsed, pm, placeholders), false)
+		if err != nil {
+			return "", p.p.wrapError(err)
+		}
+		rendered = b.Bytes()
+
+		if p.placeholdersEnabled {
+			// ToC was accessed via .Page.TableOfContents in the shortcode,
+			// at a time when the ToC wasn't ready.
+			if _, err := p.p.Content(); err != nil {
+				return "", err
+			}
+			placeholders[tocShortcodePlaceholder] = string(p.tableOfContents)
+		}
+
+		if pm.hasNonMarkdownShortcode || p.placeholdersEnabled {
+			rendered, err = replaceShortcodeTokens(rendered, placeholders)
+			if err != nil {
+				return "", err
+			}
+		}
+
+		// We need a consolidated view in $page.HasShortcode
+		p.p.shortcodeState.transferNames(s)
+
+	} else {
+		c, err := p.renderContentWithConverter(conv, []byte(contentToRender), false)
+		if err != nil {
+			return "", p.p.wrapError(err)
+		}
+
+		rendered = c.Bytes()
+	}
 
 	if opts.Display == "inline" {
 		// We may have to rethink this in the future when we get other
 		// renderers.
-		b = p.p.s.ContentSpec.TrimShortHTML(b)
+		rendered = p.p.s.ContentSpec.TrimShortHTML(rendered)
 	}
 
-	return template.HTML(string(b)), nil
+	return template.HTML(string(rendered)), nil
 }
 
 func (p *pageContentOutput) RenderWithTemplateInfo(info tpl.Info, layout ...string) (template.HTML, error) {
@@ -430,7 +477,7 @@ func (p *pageContentOutput) Render(layout ...string) (template.HTML, error) {
 	// Make sure to send the *pageState and not the *pageContentOutput to the template.
 	res, err := executeToString(p.p.s.Tmpl(), templ, p.p)
 	if err != nil {
-		return "", p.p.wrapError(errors.Wrapf(err, "failed to execute template %q v", layout))
+		return "", p.p.wrapError(fmt.Errorf("failed to execute template %s: %w", templ.Name(), err))
 	}
 	return template.HTML(res), nil
 }
@@ -440,55 +487,126 @@ func (p *pageContentOutput) initRenderHooks() error {
 		return nil
 	}
 
-	var initErr error
-
 	p.renderHooks.init.Do(func() {
-		ps := p.p
-
-		c := ps.getContentConverter()
-		if c == nil || !c.Supports(converter.FeatureRenderHooks) {
-			return
+		if p.p.pageOutputTemplateVariationsState.Load() == 0 {
+			p.p.pageOutputTemplateVariationsState.Store(1)
 		}
 
-		h, err := ps.createRenderHooks(p.f)
-		if err != nil {
-			initErr = err
-			return
+		type cacheKey struct {
+			tp hooks.RendererType
+			id any
+			f  output.Format
 		}
-		p.renderHooks.hooks = h
 
-		if !p.renderHooksHaveVariants || h.IsZero() {
-			// Check if there is a different render hooks template
-			// for any of the other page output formats.
-			// If not, we can reuse this.
-			for _, po := range ps.pageOutputs {
-				if po.f.Name != p.f.Name {
-					h2, err := ps.createRenderHooks(po.f)
-					if err != nil {
-						initErr = err
-						return
+		renderCache := make(map[cacheKey]any)
+		var renderCacheMu sync.Mutex
+
+		resolvePosition := func(ctx any) text.Position {
+			var offset int
+
+			switch v := ctx.(type) {
+			case hooks.CodeblockContext:
+				offset = bytes.Index(p.p.source.parsed.Input(), []byte(v.Inner()))
+			}
+
+			pos := p.p.posFromInput(p.p.source.parsed.Input(), offset)
+
+			if pos.LineNumber > 0 {
+				// Move up to the code fence delimiter.
+				// This is in line with how we report on shortcodes.
+				pos.LineNumber = pos.LineNumber - 1
+			}
+
+			return pos
+		}
+
+		p.renderHooks.getRenderer = func(tp hooks.RendererType, id any) any {
+			renderCacheMu.Lock()
+			defer renderCacheMu.Unlock()
+
+			key := cacheKey{tp: tp, id: id, f: p.f}
+			if r, ok := renderCache[key]; ok {
+				return r
+			}
+
+			layoutDescriptor := p.p.getLayoutDescriptor()
+			layoutDescriptor.RenderingHook = true
+			layoutDescriptor.LayoutOverride = false
+			layoutDescriptor.Layout = ""
+
+			switch tp {
+			case hooks.LinkRendererType:
+				layoutDescriptor.Kind = "render-link"
+			case hooks.ImageRendererType:
+				layoutDescriptor.Kind = "render-image"
+			case hooks.HeadingRendererType:
+				layoutDescriptor.Kind = "render-heading"
+			case hooks.CodeBlockRendererType:
+				layoutDescriptor.Kind = "render-codeblock"
+				if id != nil {
+					lang := id.(string)
+					lexer := lexers.Get(lang)
+					if lexer != nil {
+						layoutDescriptor.KindVariants = strings.Join(lexer.Config().Aliases, ",")
+					} else {
+						layoutDescriptor.KindVariants = lang
 					}
-
-					if h2.IsZero() {
-						continue
-					}
-
-					if p.renderHooks.hooks.IsZero() {
-						p.renderHooks.hooks = h2
-					}
-
-					p.renderHooksHaveVariants = !h2.Eq(p.renderHooks.hooks)
-
-					if p.renderHooksHaveVariants {
-						break
-					}
-
 				}
 			}
+
+			getHookTemplate := func(f output.Format) (tpl.Template, bool) {
+				templ, found, err := p.p.s.Tmpl().LookupLayout(layoutDescriptor, f)
+				if err != nil {
+					panic(err)
+				}
+				return templ, found
+			}
+
+			templ, found1 := getHookTemplate(p.f)
+
+			if p.p.reusePageOutputContent() {
+				// Check if some of the other output formats would give a different template.
+				for _, f := range p.p.s.renderFormats {
+					if f.Name == p.f.Name {
+						continue
+					}
+					templ2, found2 := getHookTemplate(f)
+					if found2 {
+						if !found1 {
+							templ = templ2
+							found1 = true
+							break
+						}
+
+						if templ != templ2 {
+							p.p.pageOutputTemplateVariationsState.Store(2)
+							break
+						}
+					}
+				}
+			}
+			if !found1 {
+				if tp == hooks.CodeBlockRendererType {
+					// No user provided tempplate for code blocks, so we use the native Go code version -- which is also faster.
+					r := p.p.s.ContentSpec.Converters.GetHighlighter()
+					renderCache[key] = r
+					return r
+				}
+				return nil
+			}
+
+			r := hookRendererTemplate{
+				templateHandler: p.p.s.Tmpl(),
+				SearchProvider:  templ.(identity.SearchProvider),
+				templ:           templ,
+				resolvePosition: resolvePosition,
+			}
+			renderCache[key] = r
+			return r
 		}
 	})
 
-	return initErr
+	return nil
 }
 
 func (p *pageContentOutput) setAutoSummary() error {
@@ -512,6 +630,9 @@ func (p *pageContentOutput) setAutoSummary() error {
 }
 
 func (cp *pageContentOutput) renderContent(content []byte, renderTOC bool) (converter.Result, error) {
+	if err := cp.initRenderHooks(); err != nil {
+		return nil, err
+	}
 	c := cp.p.getContentConverter()
 	return cp.renderContentWithConverter(c, content, renderTOC)
 }
@@ -521,7 +642,7 @@ func (cp *pageContentOutput) renderContentWithConverter(c converter.Converter, c
 		converter.RenderContext{
 			Src:         content,
 			RenderTOC:   renderTOC,
-			RenderHooks: cp.renderHooks.hooks,
+			GetRenderer: cp.renderHooks.getRenderer,
 		})
 
 	if err == nil {
@@ -570,12 +691,6 @@ func (p *pageContentOutput) enablePlaceholders() {
 	})
 }
 
-func (p *pageContentOutput) enableReuse() {
-	p.reuseInit.Do(func() {
-		p.reuse = true
-	})
-}
-
 // these will be shifted out when rendering a given output format.
 type pagePerOutputProviders interface {
 	targetPather
@@ -596,7 +711,7 @@ func (t targetPathsHolder) targetPaths() page.TargetPaths {
 	return t.paths
 }
 
-func executeToString(h tpl.TemplateHandler, templ tpl.Template, data interface{}) (string, error) {
+func executeToString(h tpl.TemplateHandler, templ tpl.Template, data any) (string, error) {
 	b := bp.GetBuffer()
 	defer bp.PutBuffer(b)
 	if err := h.Execute(templ, b, data); err != nil {

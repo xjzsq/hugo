@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"regexp"
 
+	"errors"
+
 	"github.com/gobwas/glob"
 	"github.com/gohugoio/hugo/config"
 	hglob "github.com/gohugoio/hugo/hugofs/glob"
 	"github.com/gohugoio/hugo/media"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 )
 
 const deploymentConfigKey = "deployment"
@@ -115,7 +116,7 @@ func (m *matcher) Matches(path string) bool {
 // decode creates a config from a given Hugo configuration.
 func decodeConfig(cfg config.Provider) (deployConfig, error) {
 	var (
-		mediaTypesConfig []map[string]interface{}
+		mediaTypesConfig []map[string]any
 		dcfg             deployConfig
 	)
 
@@ -126,7 +127,7 @@ func decodeConfig(cfg config.Provider) (deployConfig, error) {
 		return dcfg, err
 	}
 	for _, tgt := range dcfg.Targets {
-		if tgt == nil {
+		if *tgt == (target{}) {
 			return dcfg, errors.New("empty deployment target")
 		}
 		if err := tgt.parseIncludeExclude(); err != nil {
@@ -135,7 +136,7 @@ func decodeConfig(cfg config.Provider) (deployConfig, error) {
 	}
 	var err error
 	for _, m := range dcfg.Matchers {
-		if m == nil {
+		if *m == (matcher{}) {
 			return dcfg, errors.New("empty deployment matcher")
 		}
 		m.re, err = regexp.Compile(m.Pattern)

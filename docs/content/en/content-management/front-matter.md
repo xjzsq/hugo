@@ -92,7 +92,7 @@ keywords
 : the meta keywords for the content.
 
 layout
-: the layout Hugo should select from the [lookup order][lookup] when rendering the content. If a `type` is not specified in the front matter, Hugo will look for the layout of the same name in the layout directory that corresponds with a content's section. See ["Defining a Content Type"][definetype]
+: the layout Hugo should select from the [lookup order][lookup] when rendering the content. If a `type` is not specified in the front matter, Hugo will look for the layout of the same name in the layout directory that corresponds with a content's section. See [Content Types][content type].
 
 lastmod
 : the datetime at which the content was last modified.
@@ -184,10 +184,13 @@ path
 : A [Glob](https://github.com/gobwas/glob) pattern matching the content path below /content. Expects Unix-styled slashes. Note that this is the virtual path, so it starts at the mount root. The matching support double-asterisks so you can match for patterns like `/blog/*/**` to match anything from the third level and down.
 
 kind
-: The Page's Kind, e.g. "section".
+: A Glob pattern matching the Page's Kind(s), e.g. "{home,section}".
 
 lang
 : A Glob pattern matching the Page's language, e.g. "{en,sv}".
+
+environment
+: A Glob pattern matching the build environment, e.g. "{production,development}"
 
 Any of the above can be omitted. 
 
@@ -214,7 +217,7 @@ You can assign content-specific `weight` in the front matter of your content. Th
 
 ## Override Global Markdown Configuration
 
-It's possible to set some options for Markdown rendering in a content's front matter as an override to the [BlackFriday rendering options set in your project configuration][config].
+It's possible to set some options for Markdown rendering in a content's front matter as an override to the [Rendering options set in your project configuration][config].
 
 ## Front Matter Format Specs
 
@@ -229,10 +232,9 @@ It's possible to set some options for Markdown rendering in a content's front ma
 [config]: /getting-started/configuration/ "Hugo documentation for site configuration"
 [content type]: /content-management/types/
 [contentorg]: /content-management/organization/
-[definetype]: /content-management/types/#defining-a-content-type "Learn how to specify a type and a layout in a content's front matter"
 [headless-bundle]: /content-management/page-bundles/#headless-bundle
 [json]: https://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf "Specification for JSON, JavaScript Object Notation"
-[lists]: /templates/lists/#ordering-content "See how to order content in list pages; for example, templates that look to specific _index.md for content and front matter."
+[lists]: /templates/lists/#order-content "See how to order content in list pages; for example, templates that look to specific _index.md for content and front matter."
 [lookup]: /templates/lookup-order/ "Hugo traverses your templates in a specific order when rendering content to allow for DRYer templating."
 [ordering]: /templates/lists/ "Hugo provides multiple ways to sort and order your content in list templates"
 [outputs]: /templates/output-formats/ "With the release of v22, you can output your content to any text format using Hugo's familiar templating"

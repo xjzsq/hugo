@@ -24,21 +24,21 @@ func TestDecodeRemoteOptions(t *testing.T) {
 
 	for _, test := range []struct {
 		name    string
-		args    map[string]interface{}
+		args    map[string]any
 		want    fromRemoteOptions
 		wantErr bool
 	}{
 		{
 			"POST",
-			map[string]interface{}{
+			map[string]any{
 				"meThod": "PoST",
-				"headers": map[string]interface{}{
+				"headers": map[string]any{
 					"foo": "bar",
 				},
 			},
 			fromRemoteOptions{
 				Method: "POST",
-				Headers: map[string]interface{}{
+				Headers: map[string]any{
 					"foo": "bar",
 				},
 			},
@@ -46,7 +46,7 @@ func TestDecodeRemoteOptions(t *testing.T) {
 		},
 		{
 			"Body",
-			map[string]interface{}{
+			map[string]any{
 				"meThod": "POST",
 				"body":   []byte("foo"),
 			},
@@ -58,7 +58,7 @@ func TestDecodeRemoteOptions(t *testing.T) {
 		},
 		{
 			"Body, string",
-			map[string]interface{}{
+			map[string]any{
 				"meThod": "POST",
 				"body":   "foo",
 			},
@@ -82,4 +82,15 @@ func TestDecodeRemoteOptions(t *testing.T) {
 
 	}
 
+}
+
+func TestCalculateResourceID(t *testing.T) {
+	c := qt.New(t)
+
+	c.Assert(calculateResourceID("foo", nil), qt.Equals, "5917621528921068675")
+	c.Assert(calculateResourceID("foo", map[string]any{"bar": "baz"}), qt.Equals, "7294498335241413323")
+
+	c.Assert(calculateResourceID("foo", map[string]any{"key": "1234", "bar": "baz"}), qt.Equals, "14904296279238663669")
+	c.Assert(calculateResourceID("asdf", map[string]any{"key": "1234", "bar": "asdf"}), qt.Equals, "14904296279238663669")
+	c.Assert(calculateResourceID("asdf", map[string]any{"key": "12345", "bar": "asdf"}), qt.Equals, "12191037851845371770")
 }

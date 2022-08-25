@@ -16,6 +16,7 @@ package create
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -27,29 +28,64 @@ import (
 	"strings"
 
 	"github.com/gohugoio/hugo/common/hugio"
+	"github.com/gohugoio/hugo/common/maps"
 	"github.com/gohugoio/hugo/common/types"
 	"github.com/gohugoio/hugo/helpers"
 	"github.com/gohugoio/hugo/media"
 	"github.com/gohugoio/hugo/resources"
 	"github.com/gohugoio/hugo/resources/resource"
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 )
+
+type HTTPError struct {
+	error
+	Data map[string]any
+
+	StatusCode int
+	Body       string
+}
+
+func toHTTPError(err error, res *http.Response) *HTTPError {
+	if err == nil {
+		panic("err is nil")
+	}
+	if res == nil {
+		return &HTTPError{
+			error: err,
+			Data:  map[string]any{},
+		}
+	}
+
+	var body []byte
+	body, _ = ioutil.ReadAll(res.Body)
+
+	return &HTTPError{
+		error: err,
+		Data: map[string]any{
+			"StatusCode":       res.StatusCode,
+			"Status":           res.Status,
+			"Body":             string(body),
+			"TransferEncoding": res.TransferEncoding,
+			"ContentLength":    res.ContentLength,
+			"ContentType":      res.Header.Get("Content-Type"),
+		},
+	}
+}
 
 // FromRemote expects one or n-parts of a URL to a resource
 // If you provide multiple parts they will be joined together to the final URL.
-func (c *Client) FromRemote(uri string, optionsm map[string]interface{}) (resource.Resource, error) {
+func (c *Client) FromRemote(uri string, optionsm map[string]any) (resource.Resource, error) {
 	rURL, err := url.Parse(uri)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse URL for resource %s", uri)
+		return nil, fmt.Errorf("failed to parse URL for resource %s: %w", uri, err)
 	}
 
-	resourceID := helpers.HashString(uri, optionsm)
+	resourceID := calculateResourceID(uri, optionsm)
 
 	_, httpResponse, err := c.cacheGetResource.GetOrCreate(resourceID, func() (io.ReadCloser, error) {
 		options, err := decodeRemoteOptions(optionsm)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode options for resource %s", uri)
+			return nil, fmt.Errorf("failed to decode options for resource %s: %w", uri, err)
 		}
 		if err := c.validateFromRemoteArgs(uri, options); err != nil {
 			return nil, err
@@ -57,7 +93,7 @@ func (c *Client) FromRemote(uri string, optionsm map[string]interface{}) (resour
 
 		req, err := http.NewRequest(options.Method, uri, options.BodyReader())
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to create request for resource %s", uri)
+			return nil, fmt.Errorf("failed to create request for resource %s: %w", uri, err)
 		}
 		addDefaultHeaders(req)
 
@@ -70,15 +106,16 @@ func (c *Client) FromRemote(uri string, optionsm map[string]interface{}) (resour
 			return nil, err
 		}
 
-		if res.StatusCode != http.StatusNotFound {
-			if res.StatusCode < 200 || res.StatusCode > 299 {
-				return nil, errors.Errorf("failed to fetch remote resource: %s", http.StatusText(res.StatusCode))
-			}
-		}
-
 		httpResponse, err := httputil.DumpResponse(res, true)
 		if err != nil {
-			return nil, err
+			return nil, toHTTPError(err, res)
+		}
+
+		if res.StatusCode != http.StatusNotFound {
+			if res.StatusCode < 200 || res.StatusCode > 299 {
+				return nil, toHTTPError(fmt.Errorf("failed to fetch remote resource: %s", http.StatusText(res.StatusCode)), res)
+
+			}
 		}
 
 		return hugio.ToReadCloser(bytes.NewReader(httpResponse)), nil
@@ -100,7 +137,7 @@ func (c *Client) FromRemote(uri string, optionsm map[string]interface{}) (resour
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read remote resource %q", uri)
+		return nil, fmt.Errorf("failed to read remote resource %q: %w", uri, err)
 	}
 
 	filename := path.Base(rURL.Path)
@@ -125,7 +162,7 @@ func (c *Client) FromRemote(uri string, optionsm map[string]interface{}) (resour
 		}
 	}
 
-	// Look for a file extention. If it's .txt, look for a more specific.
+	// Look for a file extension. If it's .txt, look for a more specific.
 	if extensionHints == nil || extensionHints[0] == ".txt" {
 		if ext := path.Ext(filename); ext != "" {
 			extensionHints = []string{ext}
@@ -135,7 +172,7 @@ func (c *Client) FromRemote(uri string, optionsm map[string]interface{}) (resour
 	// Now resolve the media type primarily using the content.
 	mediaType := media.FromContent(c.rs.MediaTypes, extensionHints, body)
 	if mediaType.IsZero() {
-		return nil, errors.Errorf("failed to resolve media type for remote resource %q", uri)
+		return nil, fmt.Errorf("failed to resolve media type for remote resource %q", uri)
 	}
 
 	resourceID = filename[:len(filename)-len(path.Ext(filename))] + "_" + resourceID + mediaType.FirstSuffix.FullSuffix
@@ -163,6 +200,13 @@ func (c *Client) validateFromRemoteArgs(uri string, options fromRemoteOptions) e
 	return nil
 }
 
+func calculateResourceID(uri string, optionsm map[string]any) string {
+	if key, found := maps.LookupEqualFold(optionsm, "key"); found {
+		return helpers.HashString(key)
+	}
+	return helpers.HashString(uri, optionsm)
+}
+
 func addDefaultHeaders(req *http.Request, accepts ...string) {
 	for _, accept := range accepts {
 		if !hasHeaderValue(req.Header, "Accept", accept) {
@@ -174,7 +218,7 @@ func addDefaultHeaders(req *http.Request, accepts ...string) {
 	}
 }
 
-func addUserProvidedHeaders(headers map[string]interface{}, req *http.Request) {
+func addUserProvidedHeaders(headers map[string]any, req *http.Request) {
 	if headers == nil {
 		return
 	}
@@ -209,7 +253,7 @@ func hasHeaderKey(m http.Header, key string) bool {
 
 type fromRemoteOptions struct {
 	Method  string
-	Headers map[string]interface{}
+	Headers map[string]any
 	Body    []byte
 }
 
@@ -220,7 +264,7 @@ func (o fromRemoteOptions) BodyReader() io.Reader {
 	return bytes.NewBuffer(o.Body)
 }
 
-func decodeRemoteOptions(optionsm map[string]interface{}) (fromRemoteOptions, error) {
+func decodeRemoteOptions(optionsm map[string]any) (fromRemoteOptions, error) {
 	options := fromRemoteOptions{
 		Method: "GET",
 	}

@@ -26,7 +26,6 @@ import (
 
 	xml "github.com/clbanning/mxj/v2"
 	toml "github.com/pelletier/go-toml/v2"
-	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/spf13/cast"
 	jww "github.com/spf13/jwalterweatherman"
@@ -58,8 +57,8 @@ var Default = Decoder{
 
 // UnmarshalToMap will unmarshall data in format f into a new map. This is
 // what's needed for Hugo's front matter decoding.
-func (d Decoder) UnmarshalToMap(data []byte, f Format) (map[string]interface{}, error) {
-	m := make(map[string]interface{})
+func (d Decoder) UnmarshalToMap(data []byte, f Format) (map[string]any, error) {
+	m := make(map[string]any)
 	if data == nil {
 		return m, nil
 	}
@@ -71,10 +70,10 @@ func (d Decoder) UnmarshalToMap(data []byte, f Format) (map[string]interface{}, 
 
 // UnmarshalFileToMap is the same as UnmarshalToMap, but reads the data from
 // the given filename.
-func (d Decoder) UnmarshalFileToMap(fs afero.Fs, filename string) (map[string]interface{}, error) {
+func (d Decoder) UnmarshalFileToMap(fs afero.Fs, filename string) (map[string]any, error) {
 	format := FormatFromString(filename)
 	if format == "" {
-		return nil, errors.Errorf("%q is not a valid configuration format", filename)
+		return nil, fmt.Errorf("%q is not a valid configuration format", filename)
 	}
 
 	data, err := afero.ReadFile(fs, filename)
@@ -85,16 +84,16 @@ func (d Decoder) UnmarshalFileToMap(fs afero.Fs, filename string) (map[string]in
 }
 
 // UnmarshalStringTo tries to unmarshal data to a new instance of type typ.
-func (d Decoder) UnmarshalStringTo(data string, typ interface{}) (interface{}, error) {
+func (d Decoder) UnmarshalStringTo(data string, typ any) (any, error) {
 	data = strings.TrimSpace(data)
 	// We only check for the possible types in YAML, JSON and TOML.
 	switch typ.(type) {
 	case string:
 		return data, nil
-	case map[string]interface{}:
+	case map[string]any:
 		format := d.FormatFromContentString(data)
 		return d.UnmarshalToMap([]byte(data), format)
-	case []interface{}:
+	case []any:
 		// A standalone slice. Let YAML handle it.
 		return d.Unmarshal([]byte(data), YAML)
 	case bool:
@@ -106,29 +105,29 @@ func (d Decoder) UnmarshalStringTo(data string, typ interface{}) (interface{}, e
 	case float64:
 		return cast.ToFloat64E(data)
 	default:
-		return nil, errors.Errorf("unmarshal: %T not supported", typ)
+		return nil, fmt.Errorf("unmarshal: %T not supported", typ)
 	}
 }
 
 // Unmarshal will unmarshall data in format f into an interface{}.
 // This is what's needed for Hugo's /data handling.
-func (d Decoder) Unmarshal(data []byte, f Format) (interface{}, error) {
+func (d Decoder) Unmarshal(data []byte, f Format) (any, error) {
 	if data == nil {
 		switch f {
 		case CSV:
 			return make([][]string, 0), nil
 		default:
-			return make(map[string]interface{}), nil
+			return make(map[string]any), nil
 		}
 	}
-	var v interface{}
+	var v any
 	err := d.UnmarshalTo(data, f, &v)
 
 	return v, err
 }
 
 // UnmarshalTo unmarshals data in format f into v.
-func (d Decoder) UnmarshalTo(data []byte, f Format, v interface{}) error {
+func (d Decoder) UnmarshalTo(data []byte, f Format, v any) error {
 	var err error
 
 	switch f {
@@ -140,19 +139,19 @@ func (d Decoder) UnmarshalTo(data []byte, f Format, v interface{}) error {
 		var xmlRoot xml.Map
 		xmlRoot, err = xml.NewMapXml(data)
 
-		var xmlValue map[string]interface{}
+		var xmlValue map[string]any
 		if err == nil {
 			xmlRootName, err := xmlRoot.Root()
 			if err != nil {
-				return toFileError(f, errors.Wrap(err, "failed to unmarshal XML"))
+				return toFileError(f, data, fmt.Errorf("failed to unmarshal XML: %w", err))
 			}
-			xmlValue = xmlRoot[xmlRootName].(map[string]interface{})
+			xmlValue = xmlRoot[xmlRootName].(map[string]any)
 		}
 
 		switch v := v.(type) {
-		case *map[string]interface{}:
+		case *map[string]any:
 			*v = xmlValue
-		case *interface{}:
+		case *any:
 			*v = xmlValue
 		}
 	case TOML:
@@ -160,19 +159,19 @@ func (d Decoder) UnmarshalTo(data []byte, f Format, v interface{}) error {
 	case YAML:
 		err = yaml.Unmarshal(data, v)
 		if err != nil {
-			return toFileError(f, errors.Wrap(err, "failed to unmarshal YAML"))
+			return toFileError(f, data, fmt.Errorf("failed to unmarshal YAML: %w", err))
 		}
 
 		// To support boolean keys, the YAML package unmarshals maps to
 		// map[interface{}]interface{}. Here we recurse through the result
 		// and change all maps to map[string]interface{} like we would've
 		// gotten from `json`.
-		var ptr interface{}
+		var ptr any
 		switch v.(type) {
-		case *map[string]interface{}:
-			ptr = *v.(*map[string]interface{})
-		case *interface{}:
-			ptr = *v.(*interface{})
+		case *map[string]any:
+			ptr = *v.(*map[string]any)
+		case *any:
+			ptr = *v.(*any)
 		default:
 			// Not a map.
 		}
@@ -180,10 +179,10 @@ func (d Decoder) UnmarshalTo(data []byte, f Format, v interface{}) error {
 		if ptr != nil {
 			if mm, changed := stringifyMapKeys(ptr); changed {
 				switch v.(type) {
-				case *map[string]interface{}:
-					*v.(*map[string]interface{}) = mm.(map[string]interface{})
-				case *interface{}:
-					*v.(*interface{}) = mm
+				case *map[string]any:
+					*v.(*map[string]any) = mm.(map[string]any)
+				case *any:
+					*v.(*any) = mm
 				}
 			}
 		}
@@ -191,17 +190,17 @@ func (d Decoder) UnmarshalTo(data []byte, f Format, v interface{}) error {
 		return d.unmarshalCSV(data, v)
 
 	default:
-		return errors.Errorf("unmarshal of format %q is not supported", f)
+		return fmt.Errorf("unmarshal of format %q is not supported", f)
 	}
 
 	if err == nil {
 		return nil
 	}
 
-	return toFileError(f, errors.Wrap(err, "unmarshal failed"))
+	return toFileError(f, data, fmt.Errorf("unmarshal failed: %w", err))
 }
 
-func (d Decoder) unmarshalCSV(data []byte, v interface{}) error {
+func (d Decoder) unmarshalCSV(data []byte, v any) error {
 	r := csv.NewReader(bytes.NewReader(data))
 	r.Comma = d.Delimiter
 	r.Comment = d.Comment
@@ -212,10 +211,10 @@ func (d Decoder) unmarshalCSV(data []byte, v interface{}) error {
 	}
 
 	switch v.(type) {
-	case *interface{}:
-		*v.(*interface{}) = records
+	case *any:
+		*v.(*any) = records
 	default:
-		return errors.Errorf("CSV cannot be unmarshaled into %T", v)
+		return fmt.Errorf("CSV cannot be unmarshaled into %T", v)
 
 	}
 
@@ -230,14 +229,14 @@ func parseORGDate(s string) string {
 	return s
 }
 
-func (d Decoder) unmarshalORG(data []byte, v interface{}) error {
+func (d Decoder) unmarshalORG(data []byte, v any) error {
 	config := org.New()
 	config.Log = jww.WARN
 	document := config.Parse(bytes.NewReader(data), "")
 	if document.Error != nil {
 		return document.Error
 	}
-	frontMatter := make(map[string]interface{}, len(document.BufferSettings))
+	frontMatter := make(map[string]any, len(document.BufferSettings))
 	for k, v := range document.BufferSettings {
 		k = strings.ToLower(k)
 		if strings.HasSuffix(k, "[]") {
@@ -252,16 +251,16 @@ func (d Decoder) unmarshalORG(data []byte, v interface{}) error {
 		}
 	}
 	switch v.(type) {
-	case *map[string]interface{}:
-		*v.(*map[string]interface{}) = frontMatter
+	case *map[string]any:
+		*v.(*map[string]any) = frontMatter
 	default:
-		*v.(*interface{}) = frontMatter
+		*v.(*any) = frontMatter
 	}
 	return nil
 }
 
-func toFileError(f Format, err error) error {
-	return herrors.ToFileError(string(f), err)
+func toFileError(f Format, data []byte, err error) error {
+	return herrors.NewFileErrorFromName(err, fmt.Sprintf("_stream.%s", f)).UpdateContent(bytes.NewReader(data), nil)
 }
 
 // stringifyMapKeys recurses into in and changes all instances of
@@ -270,22 +269,22 @@ func toFileError(f Format, err error) error {
 // described here: https://github.com/go-yaml/yaml/issues/139
 //
 // Inspired by https://github.com/stripe/stripe-mock, MIT licensed
-func stringifyMapKeys(in interface{}) (interface{}, bool) {
+func stringifyMapKeys(in any) (any, bool) {
 	switch in := in.(type) {
-	case []interface{}:
+	case []any:
 		for i, v := range in {
 			if vv, replaced := stringifyMapKeys(v); replaced {
 				in[i] = vv
 			}
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		for k, v := range in {
 			if vv, changed := stringifyMapKeys(v); changed {
 				in[k] = vv
 			}
 		}
-	case map[interface{}]interface{}:
-		res := make(map[string]interface{})
+	case map[any]any:
+		res := make(map[string]any)
 		var (
 			ok  bool
 			err error

@@ -12,7 +12,7 @@ Generate Markdown documentation for the Hugo CLI.
 Generate Markdown documentation for the Hugo CLI.
 
 This command is, mostly, used to create up-to-date documentation
-of Hugo's command-line interface for http://gohugo.io/.
+of Hugo's command-line interface for https://gohugo.io/.
 
 It creates one Markdown file per command with front matter suitable
 for rendering in Hugo.
@@ -31,6 +31,7 @@ hugo gen doc [flags]
 ### Options inherited from parent commands
 
 ```
+      --clock string               set the clock used by Hugo, e.g. --clock 2021-11-06T22:30:00.00+09:00
       --config string              config file (default is path/config.yaml|json|toml)
       --configDir string           config dir (default "config")
       --debug                      debug output

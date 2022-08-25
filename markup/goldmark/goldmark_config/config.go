@@ -23,14 +23,15 @@ const (
 // DefaultConfig holds the default Goldmark configuration.
 var Default = Config{
 	Extensions: Extensions{
-		Typographer:    true,
-		Footnote:       true,
-		DefinitionList: true,
-		Table:          true,
-		Strikethrough:  true,
-		Linkify:        true,
-		TaskList:       true,
-		Mathjax:        true,
+		Typographer:     true,
+		Footnote:        true,
+		DefinitionList:  true,
+		Table:           true,
+		Strikethrough:   true,
+		Linkify:         true,
+		LinkifyProtocol: "https",
+		TaskList:        true,
+		Mathjax:         true,
 	},
 	Renderer: Renderer{
 		Unsafe: false,
@@ -58,11 +59,12 @@ type Extensions struct {
 	DefinitionList bool
 
 	// GitHub flavored markdown
-	Table         bool
-	Strikethrough bool
-	Linkify       bool
-	TaskList      bool
-	Mathjax       bool
+	Table           bool
+	Strikethrough   bool
+	Linkify         bool
+	LinkifyProtocol string
+	TaskList        bool	
+	Mathjax         bool
 }
 
 type Renderer struct {

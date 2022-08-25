@@ -16,6 +16,7 @@ A collection of several useful generators.
 ### Options inherited from parent commands
 
 ```
+      --clock string               set the clock used by Hugo, e.g. --clock 2021-11-06T22:30:00.00+09:00
       --config string              config file (default is path/config.yaml|json|toml)
       --configDir string           config dir (default "config")
       --debug                      debug output
@@ -33,7 +34,6 @@ A collection of several useful generators.
 ### SEE ALSO
 
 * [hugo](/commands/hugo/)	 - hugo builds your site
-* [hugo gen autocomplete](/commands/hugo_gen_autocomplete/)	 - Generate shell autocompletion script for Hugo
 * [hugo gen chromastyles](/commands/hugo_gen_chromastyles/)	 - Generate CSS stylesheet for the Chroma code highlighter
 * [hugo gen doc](/commands/hugo_gen_doc/)	 - Generate Markdown documentation for the Hugo CLI.
 * [hugo gen man](/commands/hugo_gen_man/)	 - Generate man pages for the Hugo CLI

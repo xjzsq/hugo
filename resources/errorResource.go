@@ -19,16 +19,15 @@ import (
 	"github.com/gohugoio/hugo/common/hugio"
 	"github.com/gohugoio/hugo/common/maps"
 	"github.com/gohugoio/hugo/media"
-
+	"github.com/gohugoio/hugo/resources/images"
 	"github.com/gohugoio/hugo/resources/images/exif"
-
 	"github.com/gohugoio/hugo/resources/resource"
 )
 
 var (
 	_ error = (*errorResource)(nil)
 	// Imnage covers all current Resource implementations.
-	_ resource.Image = (*errorResource)(nil)
+	_ images.ImageResource = (*errorResource)(nil)
 	// The list of user facing and exported interfaces in resource.go
 	// Note that if we're missing some interface here, the user will still
 	// get an error, but not as pretty.
@@ -40,90 +39,94 @@ var (
 )
 
 // NewErrorResource wraps err in a Resource where all but the Err method will panic.
-func NewErrorResource(err error) resource.Resource {
-	return &errorResource{error: err}
+func NewErrorResource(err resource.ResourceError) resource.Resource {
+	return &errorResource{ResourceError: err}
 }
 
 type errorResource struct {
-	error
+	resource.ResourceError
 }
 
-func (e *errorResource) Err() error {
-	return e.error
+func (e *errorResource) Err() resource.ResourceError {
+	return e.ResourceError
 }
 
 func (e *errorResource) ReadSeekCloser() (hugio.ReadSeekCloser, error) {
-	panic(e.error)
+	panic(e.ResourceError)
 }
 
-func (e *errorResource) Content() (interface{}, error) {
-	panic(e.error)
+func (e *errorResource) Content() (any, error) {
+	panic(e.ResourceError)
 }
 
 func (e *errorResource) ResourceType() string {
-	panic(e.error)
+	panic(e.ResourceError)
 }
 
 func (e *errorResource) MediaType() media.Type {
-	panic(e.error)
+	panic(e.ResourceError)
 }
 
 func (e *errorResource) Permalink() string {
-	panic(e.error)
+	panic(e.ResourceError)
 }
 
 func (e *errorResource) RelPermalink() string {
-	panic(e.error)
+	panic(e.ResourceError)
 }
 
 func (e *errorResource) Name() string {
-	panic(e.error)
+	panic(e.ResourceError)
 }
 
 func (e *errorResource) Title() string {
-	panic(e.error)
+	panic(e.ResourceError)
 }
 
 func (e *errorResource) Params() maps.Params {
-	panic(e.error)
+	panic(e.ResourceError)
 }
 
-func (e *errorResource) Data() interface{} {
-	panic(e.error)
+func (e *errorResource) Data() any {
+	panic(e.ResourceError)
 }
 
 func (e *errorResource) Height() int {
-	panic(e.error)
+	panic(e.ResourceError)
 }
 
 func (e *errorResource) Width() int {
-	panic(e.error)
+	panic(e.ResourceError)
 }
 
-func (e *errorResource) Fill(spec string) (resource.Image, error) {
-	panic(e.error)
+func (e *errorResource) Crop(spec string) (images.ImageResource, error) {
+	panic(e.ResourceError)
 }
 
-func (e *errorResource) Fit(spec string) (resource.Image, error) {
-	panic(e.error)
+func (e *errorResource) Fill(spec string) (images.ImageResource, error) {
+	panic(e.ResourceError)
 }
 
-func (e *errorResource) Resize(spec string) (resource.Image, error) {
-	panic(e.error)
+func (e *errorResource) Fit(spec string) (images.ImageResource, error) {
+	panic(e.ResourceError)
 }
 
-func (e *errorResource) Filter(filters ...interface{}) (resource.Image, error) {
-	panic(e.error)
+func (e *errorResource) Resize(spec string) (images.ImageResource, error) {
+	panic(e.ResourceError)
 }
 
-func (e *errorResource) Exif() *exif.Exif {
-	panic(e.error)
+func (e *errorResource) Filter(filters ...any) (images.ImageResource, error) {
+	panic(e.ResourceError)
+}
+
+func (e *errorResource) Exif() *exif.ExifInfo {
+	panic(e.ResourceError)
 }
 
 func (e *errorResource) DecodeImage() (image.Image, error) {
-	panic(e.error)
+	panic(e.ResourceError)
 }
 
 func (e *errorResource) Transform(...ResourceTransformation) (ResourceTransformer, error) {
-	panic(e.error)
+	panic(e.ResourceError)
 }

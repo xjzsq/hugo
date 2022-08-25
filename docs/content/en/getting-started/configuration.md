@@ -46,7 +46,7 @@ In addition to using a single site config file, one can use the `configDir` dire
 
 - Each file represents a configuration root object, such as `params.toml` for `[Params]`, `menu(s).toml` for `[Menu]`, `languages.toml` for `[Languages]` etc...
 - Each file's content must be top-level, for example:
-  
+
 {{< code-toggle file="config" >}}
 [Params]
   foo = "bar"
@@ -120,9 +120,6 @@ The directory where Hugo finds asset files used in [Hugo Pipes](/hugo-pipes/). {
 
 ### baseURL
 Hostname (and path) to the root, e.g. https://bep.is/
-
-### blackfriday
-See [Configure Blackfriday](/getting-started/configuration-markup#blackfriday)
 
 ### build
 See [Configure Build](#configure-build)
@@ -220,7 +217,7 @@ Disable automatic live reloading of browser window.
 
 : Do not convert the url/path to lowercase.
 
-### enableEmoji 
+### enableEmoji
 
 **Default value:**  false
 
@@ -254,18 +251,6 @@ Enable generation of `robots.txt` file.
 
 See [Front matter Configuration](#configure-front-matter).
 
-### footnoteAnchorPrefix
-
-**Default value:**  ""
-
-Prefix for footnote anchors.
-
-###  footnoteReturnLinkContents
-
-**Default value:**  ""
-
-Text to display for footnote return links.
-
 ### googleAnalytics
 
 **Default value:**  ""
@@ -279,7 +264,8 @@ Google Analytics tracking ID.
 If true, auto-detect Chinese/Japanese/Korean Languages in the content. This will make `.Summary` and `.WordCount` behave correctly for CJK languages.
 
 ### imaging
-See [Image Processing Config](/content-management/image-processing/#image-processing-config).
+
+See [Image Processing Config](/content-management/image-processing/#imaging-configuration).
 
 ### languageCode
 
@@ -288,6 +274,7 @@ See [Image Processing Config](/content-management/image-processing/#image-proces
 A language tag as defined by [RFC 5646](https://datatracker.ietf.org/doc/html/rfc5646). The internal [RSS template](https://github.com/gohugoio/hugo/blob/master/tpl/tplimpl/embedded/templates/_default/rss.xml) populates its `<language>` element with this value. The value is not used elsewhere.
 
 ### languages
+
 See [Configure Languages](/content-management/multilingual/#configure-languages).
 
 ### disableLanguages
@@ -310,18 +297,27 @@ See [Configure Minify](#configure-minify)
 Module config see [Module Config](/hugo-modules/configuration/).{{< new-in "0.56.0" >}}
 
 ### newContentEditor
+
+**Default value:** ""
+
 The editor to use when creating new content.
 
 ### noChmod
+
+**Default value:** false
+
 Don't sync permission mode of files.
 
 ### noTimes
+
+**Default value:** false
+
 Don't sync modification time of files.
 
 ### outputFormats
 See [Configure Output Formats](#configure-additional-output-formats).
 
-### paginate 
+### paginate
 
 **Default value:** 10
 
@@ -352,6 +348,9 @@ The directory to where Hugo will write the final static site (the HTML files etc
 : See [Related Content](/content-management/related/#configure-related-content).{{< new-in "0.27" >}}
 
 ### relativeURLs 
+
+**Default value:** false
+
 Enable this to make all relative URLs relative to content root. Note that this does not affect absolute URLs.
 
 ### refLinksErrorLevel
@@ -376,6 +375,8 @@ content/post/hügó.md --> https://example.org/post/hugo/
 
 ### rssLimit
 
+**Default value:** -1 (unlimited)
+
 Maximum number of items in the RSS feed.
 
 ### sectionPagesMenu
@@ -386,13 +387,13 @@ See ["Section Menu for Lazy Bloggers"](/templates/menu-templates/#section-menu-f
 See [Security Policy](/about/security-model/#security-policy)
 
 ### sitemap
-Default [sitemap configuration](/templates/sitemap-template/#configure-sitemapxml).
+Default [sitemap configuration](/templates/sitemap-template/#configuration).
 
 ### summaryLength
 
 **Default value:** 70
 
-The length of text in words to show in a [`.Summary`](/content-management/summaries/#hugo-defined-automatic-summary-splitting).
+The length of text in words to show in a [`.Summary`](/content-management/summaries/#automatic-summary-splitting).
 
 ### taxonomies
 See [Configure Taxonomies](/content-management/taxonomies#configure-taxonomies).
@@ -431,6 +432,8 @@ See [Configure Title Case](#configure-title-case)
 When enabled, creates URL of the form `/filename.html` instead of `/filename/`.
 
 ### watch
+
+**Default value:** false
 
 Watch filesystem for changes and recreate as needed.
 
@@ -552,7 +555,6 @@ The following is a typical example of a configuration file. The values nested un
 {{< code-toggle file="config">}}
 baseURL: "https://yoursite.example.com/"
 title: "My Hugo Site"
-footnoteReturnLinkContents: "↩"
 permalinks:
   posts: /:year/:month/:title/
 params:

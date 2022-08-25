@@ -5,15 +5,15 @@ url: /commands/hugo_completion_powershell/
 ---
 ## hugo completion powershell
 
-generate the autocompletion script for powershell
+Generate the autocompletion script for powershell
 
 ### Synopsis
-
 
 Generate the autocompletion script for powershell.
 
 To load completions in your current shell session:
-PS C:\> hugo completion powershell | Out-String | Invoke-Expression
+
+	hugo completion powershell | Out-String | Invoke-Expression
 
 To load completions for every new session, add the output of the above command
 to your powershell profile.
@@ -33,6 +33,7 @@ hugo completion powershell [flags]
 ### Options inherited from parent commands
 
 ```
+      --clock string               set the clock used by Hugo, e.g. --clock 2021-11-06T22:30:00.00+09:00
       --config string              config file (default is path/config.yaml|json|toml)
       --configDir string           config dir (default "config")
       --debug                      debug output
@@ -49,5 +50,5 @@ hugo completion powershell [flags]
 
 ### SEE ALSO
 
-* [hugo completion](/commands/hugo_completion/)	 - generate the autocompletion script for the specified shell
+* [hugo completion](/commands/hugo_completion/)	 - Generate the autocompletion script for the specified shell
 

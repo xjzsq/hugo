@@ -21,6 +21,7 @@ import (
 	"runtime/debug"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gohugoio/hugo/hugofs/files"
@@ -37,13 +38,8 @@ const (
 )
 
 var (
-	// commitHash contains the current Git revision.
-	// Use mage to build to make sure this gets set.
-	commitHash string
-
-	// buildDate contains the date of the current build.
+	// buildDate allows vendor-specified build date when .git/ is unavailable.
 	buildDate string
-
 	// vendorInfo contains vendor notes about the current build.
 	vendorInfo string
 )
@@ -58,6 +54,9 @@ type Info struct {
 	// This can also be set by the user.
 	// It can be any string, but it will be all lower case.
 	Environment string
+
+	// version of go that the Hugo binary was built with
+	GoVersion string
 
 	deps []*Dependency
 }
@@ -90,11 +89,25 @@ func NewInfo(environment string, deps []*Dependency) Info {
 	if environment == "" {
 		environment = EnvironmentProduction
 	}
+	var (
+		commitHash string
+		buildDate  string
+		goVersion  string
+	)
+
+	bi := getBuildInfo()
+	if bi != nil {
+		commitHash = bi.Revision
+		buildDate = bi.RevisionTime
+		goVersion = bi.GoVersion
+	}
+
 	return Info{
 		CommitHash:  commitHash,
 		BuildDate:   buildDate,
 		Environment: environment,
 		deps:        deps,
+		GoVersion:   goVersion,
 	}
 }
 
@@ -109,6 +122,7 @@ func GetExecEnviron(workDir string, cfg config.Provider, fs afero.Fs) []string {
 	config.SetEnvVars(&env, "NODE_PATH", nodepath)
 	config.SetEnvVars(&env, "PWD", workDir)
 	config.SetEnvVars(&env, "HUGO_ENVIRONMENT", cfg.GetString("environment"))
+	config.SetEnvVars(&env, "HUGO_ENV", cfg.GetString("environment"))
 
 	if fs != nil {
 		fis, err := afero.ReadDir(fs, files.FolderJSConfig)
@@ -122,6 +136,52 @@ func GetExecEnviron(workDir string, cfg config.Provider, fs afero.Fs) []string {
 	}
 
 	return env
+}
+
+type buildInfo struct {
+	VersionControlSystem string
+	Revision             string
+	RevisionTime         string
+	Modified             bool
+
+	GoOS   string
+	GoArch string
+
+	*debug.BuildInfo
+}
+
+var bInfo *buildInfo
+var bInfoInit sync.Once
+
+func getBuildInfo() *buildInfo {
+	bInfoInit.Do(func() {
+		bi, ok := debug.ReadBuildInfo()
+		if !ok {
+			return
+		}
+
+		bInfo = &buildInfo{BuildInfo: bi}
+
+		for _, s := range bInfo.Settings {
+			switch s.Key {
+			case "vcs":
+				bInfo.VersionControlSystem = s.Value
+			case "vcs.revision":
+				bInfo.Revision = s.Value
+			case "vcs.time":
+				bInfo.RevisionTime = s.Value
+			case "vcs.modified":
+				bInfo.Modified = s.Value == "true"
+			case "GOOS":
+				bInfo.GoOS = s.Value
+			case "GOARCH":
+				bInfo.GoArch = s.Value
+			}
+		}
+
+	})
+
+	return bInfo
 }
 
 // GetDependencyList returns a sorted dependency list on the format package="version".
@@ -142,8 +202,8 @@ func GetDependencyList() []string {
 		)
 	}
 
-	bi, ok := debug.ReadBuildInfo()
-	if !ok {
+	bi := getBuildInfo()
+	if bi == nil {
 		return deps
 	}
 
