@@ -1,3 +1,7 @@
+The official has fixed this issue in [v0.122.0](https://github.com/gohugoio/hugo/releases/tag/v0.122.0), so this repository is being archived.
+
+官方已在 [v0.122.0](https://github.com/gohugoio/hugo/releases/tag/v0.122.0) 版本修复此问题，因此本仓库存档处理。
+
 <a href="https://gohugo.io/"><img src="https://raw.githubusercontent.com/gohugoio/gohugoioTheme/master/static/images/hugo-logo-wide.svg?sanitize=true" alt="Hugo" width="565"></a>
 
 A Fast and Flexible Static Site Generator built with love by [bep](https://github.com/bep), [spf13](https://spf13.com/) and [friends](https://github.com/gohugoio/hugo/graphs/contributors) in [Go](https://go.dev/).
